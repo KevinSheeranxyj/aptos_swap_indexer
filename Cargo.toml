@@ -1,0 +1,22 @@
+[package]
+name = "aptos_swap_indexer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aptos-indexer-processor-sdk = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "aptos-indexer-processor-sdk-v1.0.0" }
+aptos-indexer-processor-sdk-server-framework = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "aptos-indexer-processor-sdk-v1.0.0" }
+aptos-indexer-testing-framework = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "aptos-indexer-processor-sdk-v1.0.0" }
+async-trait = "0.1.80"
+chrono = { version = "0.4.19", features = ["clock", "serde"] }
+clap = { version = "4.3.5", features = ["derive", "unstable-styles"] }
+diesel = { version = "2.1", features = [
+    "chrono",
+    "postgres_backend",
+    "numeric",
+    "serde_json",
+] }
+tokio = { version = "1.32", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+dotenv = "0.15"

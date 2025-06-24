@@ -1,0 +1,10 @@
+health_check_port: 8085
+server_config:
+  transaction_stream_config:
+    indexer_grpc_data_service_address: "grpc.testnet.aptoslabs.com:443"
+    auth_token: "aptoslabs_eS1vPw1bQBT_Ltshi3kEaDbPdwUu7ME8Emm71jAnrH1Fb"
+    request_name_header: "events-processor"
+    starting_version: 0
+    request_ending_version: 4
+  postgres_config:
+    connection_string: postgresql://postgres:@localhost:5432/example
