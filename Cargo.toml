@@ -4,19 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aptos-indexer-processor-sdk = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "aptos-indexer-processor-sdk-v1.0.0" }
-aptos-indexer-processor-sdk-server-framework = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "aptos-indexer-processor-sdk-v1.0.0" }
-aptos-indexer-testing-framework = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "aptos-indexer-processor-sdk-v1.0.0" }
+aptos-indexer-processor-sdk = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "bef75a40c768157df0e5b5d5c1ba1f86c0fe92e4", features = ["postgres_full"]}
+anyhow = "1.0.86"
 async-trait = "0.1.80"
-chrono = { version = "0.4.19", features = ["clock", "serde"] }
 clap = { version = "4.3.5", features = ["derive", "unstable-styles"] }
-diesel = { version = "2.1", features = [
+diesel = { version = "=2.2.0", features = [
     "chrono",
     "postgres_backend",
     "numeric",
     "serde_json",
 ] }
-tokio = { version = "1.32", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-dotenv = "0.15"
+diesel_migrations = { version = "2.1.0", features = ["postgres"] }
+field_count = "0.1.1"
+rayon = "1.10.0"
+serde = { version = "1.0.193", features = ["derive", "rc"] }
+serde_json = { version = "1.0.81", features = ["preserve_order"] }
+tokio = { version = "1.37.0", features = ["full"] }
+tracing = "0.1.34"
