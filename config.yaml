@@ -1,4 +1,7 @@
 health_check_port: 8085
+# Set auth token
+# Set postgres_connection_string
+# Adjust starting_version / requiest_ending_version
 server_config:
   transaction_stream_config:
     indexer_grpc_data_service_address: "https://grpc.mainnet.aptoslabs.com:443" # using mainnet as an example

@@ -13,30 +13,44 @@ use field_count::FieldCount;
 use rayon::prelude::*;
 use tracing::{error, info, warn};
 
+use tracning_subscriber::{fmt, EnvFilter};
+
+
 pub mod events_model;
 #[path = "db/src/schema.rs"]
 pub mod schema;
 
-const MIGRATIONS: EmbeddedMigrations = embed_migrations!("src/db/migrations");
 
-fn insert_events_query(
-    items_to_insert: Vec<EventModel>,
-) -> impl QueryFragment<Pg> + diesel::query_builder::QueryId + Send {
-    use crate::schema::events::dsl::*;
-    diesel::insert_into(crate::schema::events::table)
-        .values(items_to_insert)
-        .on_conflict((transaction_version, event_index))
-        .do_nothing()
+
+#[derive(Parser, Debug)]
+#[command(
+    name = "hyperion-swap-processor",
+    about = "Aptos Indexer SDK processor for Hyperion DEX swap events",
+    version
+)]
+struct Cli {
+    #[arg(short, long, default_value = "config.yaml")]
+    config: String,
 }
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
+
+    // ---Loggin----
+
+    tracning_subscriber::fmt()
+    .with_env_filter(
+        EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info, hyperion_swap_processor=debug"))
+    ).json().init();
+
     process(
         "events_processor".to_string(),
         MIGRATIONS,
         |transactions, conn_pool| {
             async move {
-                let events = transactions
+                let events = transaction
                     .par_iter()
                     .map(|txn| {
                         let txn_version = txn.version as i64;
