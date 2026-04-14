@@ -1,26 +1,27 @@
-use crate::events_model::EventModel;
+/// Entry point for the Hyperion Swap Processor.
+///
+/// Usage:
+///   ```
+///   hyperion-swap-processor --config config.yaml
+///   ```
+///
+/// The binary reads the YAML config, validates it, then runs the processor
+/// pipeline until the stream ends (if `request_ending_version` is set) or
+/// until interrupted.
 use anyhow::Result;
-use aptos_indexer_processor_sdk::{
-    aptos_protos::transaction::v1::transaction::TxnData,
-    postgres::{
-        basic_processor::process,
-        utils::database::{execute_in_chunks, MAX_DIESEL_PARAM_SIZE},
-    },
-};
-use diesel::{pg::Pg, query_builder::QueryFragment};
-use diesel_migrations::{embed_migrations, EmbeddedMigrations};
-use field_count::FieldCount;
-use rayon::prelude::*;
-use tracing::{error, info, warn};
-
-use tracning_subscriber::{fmt, EnvFilter};
+use clap::Parser;
+use tracing::info;
+use tracing_subscriber::{fmt, EnvFilter};
 
 
-pub mod events_model;
-#[path = "db/src/schema.rs"]
-pub mod schema;
+mod config;
+mod db;
+mod processors;
 
+use config::IndexerProcessorConfig;
+use processors::hyperion_swap::processor::HyperionSwapProcessor;
 
+// ─── CLI ──────────────────────────────────────────────────────────────────────
 
 #[derive(Parser, Debug)]
 #[command(
@@ -29,81 +30,49 @@ pub mod schema;
     version
 )]
 struct Cli {
+    /// Path to the YAML configuration file
     #[arg(short, long, default_value = "config.yaml")]
     config: String,
 }
 
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // ── Logging ───────────────────────────────────────────────────────────────
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,hyperion_swap_processor=debug")),
+        )
+        .json()
+        .init();
 
-    // ---Loggin----
+    // ── Parse CLI ─────────────────────────────────────────────────────────────
+    let cli = Cli::parse();
 
-    tracning_subscriber::fmt()
-    .with_env_filter(
-        EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info, hyperion_swap_processor=debug"))
-    ).json().init();
+    info!(config_path = %cli.config, "Loading configuration");
 
-    process(
-        "events_processor".to_string(),
-        MIGRATIONS,
-        |transactions, conn_pool| {
-            async move {
-                let events = transaction
-                    .par_iter()
-                    .map(|txn| {
-                        let txn_version = txn.version as i64;
-                        let block_height = txn.block_height as i64;
-                        let txn_data = match txn.txn_data.as_ref() {
-                            Some(data) => data,
-                            None => {
-                                warn!(
-                                transaction_version = txn_version,
-                                "Transaction data doesn't exist"
-                            );
-                                return vec![];
-                            },
-                        };
-                        let default = vec![];
-                        let raw_events = match txn_data {
-                            TxnData::BlockMetadata(tx_inner) => &tx_inner.events,
-                            TxnData::Genesis(tx_inner) => &tx_inner.events,
-                            TxnData::User(tx_inner) => &tx_inner.events,
-                            _ => &default,
-                        };
+    // ── Load config ───────────────────────────────────────────────────────────
+    let config_str = std::fs::read_to_string(&cli.config)
+        .map_err(|e| anyhow::anyhow!("Cannot read config file '{}': {}", cli.config, e))?;
 
-                        EventModel::from_events(raw_events, txn_version, block_height)
-                    })
-                    .flatten()
-                    .collect::<Vec<EventModel>>();
+    let config: IndexerProcessorConfig = serde_yaml::from_str(&config_str)
+        .map_err(|e| anyhow::anyhow!("Failed to parse config YAML: {}", e))?;
 
-                // Store events in the database
-                let execute_res = execute_in_chunks(
-                    conn_pool.clone(),
-                    insert_events_query,
-                    &events,
-                    MAX_DIESEL_PARAM_SIZE / EventModel::field_count(),
-                )
-                    .await;
-                match execute_res {
-                    Ok(_) => {
-                        info!(
-                        "Events version [{}, {}] stored successfully",
-                        transactions.first().unwrap().version,
-                        transactions.last().unwrap().version
-                    );
-                        Ok(())
-                    },
-                    Err(e) => {
-                        error!("Failed to store events: {:?}", e);
-                        Err(e)
-                    },
-                }
-            }
-        },
+    config.validate()?;
 
-    )
-        .await?;
+    info!(
+        grpc_address = %config.transaction_stream_config.indexer_grpc_data_service_address,
+        starting_version = config.transaction_stream_config.starting_version,
+        ending_version = ?config.transaction_stream_config.request_ending_version,
+        "Configuration loaded"
+    );
+
+    // ── Run processor ─────────────────────────────────────────────────────────
+    let processor = HyperionSwapProcessor::new(config);
+    processor.run_processor().await?;
+
+    info!("Processor finished successfully");
     Ok(())
 }

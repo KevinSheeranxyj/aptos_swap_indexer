@@ -1,37 +1,46 @@
 [package]
-name = "aptos_swap_indexer"
+name = "hyperion-swap-processor"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-aptos-indexer-processor-sdk = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "bef75a40c768157df0e5b5d5c1ba1f86c0fe92e4", features = ["postgres_full"]}
-# Error handling
-anyhow = "1.0.86"
-async-trait = "0.1.80"
-# Config / CLI
-clap = { version = "4.3.5", features = ["derive", "unstable-styles"] }
-diesel-async = { version = "0.4", features = ["postgres","bb8"]}
-diesel = { version = "=2.2.0", features = [
-    "chrono",
-    "postgres_backend",
-    "numeric",
-    "serde_json",
-] }
-diesel_migrations = { version = "2.1.0", features = ["postgres"] }
-field_count = "0.1.1"
-rayon = "1.10.0"
-## Serialization
-serde = { version = "1.0.193", features = ["derive", "rc"] }
-serde_json = { version = "1.0.81", features = ["preserve_order"] }
+[[bin]]
+name = "hyperion-swap-processor"
+path = "src/main.rs"
 
-# Async 
-tokio = { version = "1.37.0", features = ["full"] }
-tracing = "0.1.34"
+[dependencies]
+# Aptos Indexer SDK
+aptos-indexer-processor-sdk = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "e1e1bdd9349f0a68c9fc53b7e2cebda9e2ce92b7" }
+aptos-indexer-processor-sdk-server-framework = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "e1e1bdd9349f0a68c9fc53b7e2cebda9e2ce92b7" }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Database (Diesel + PostgreSQL)
+diesel = { version = "2.1", features = ["postgres", "r2d2", "numeric", "serde_json"] }
+diesel-async = { version = "0.4", features = ["postgres", "bb8"] }
+diesel_migrations = { version = "2.1", features = ["postgres"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+anyhow = "1"
+
+# Config / CLI
+clap = { version = "4", features = ["derive"] }
 
 # Utilities
-chrono = { version   = "0.4.44", features = ["serde"]}
-bigdecimal = { version = "0.4", features = ["serde"]}
-hex = "0.4.3"
+chrono = { version = "0.4", features = ["serde"] }
+bigdecimal = { version = "0.4", features = ["serde"] }
+hex = "0.4"
+
+serde_yaml = { version = "0.9.34+deprecated"}
 
 [dev-dependencies]
 tokio-test = "0.4"

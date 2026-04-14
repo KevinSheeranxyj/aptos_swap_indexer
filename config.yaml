@@ -1,13 +1,46 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Hyperion Swap Processor – example configuration
+# Copy this file to config.yaml and fill in your values.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Port used by the built-in health-check HTTP endpoint.
+# GET http://localhost:8085/health  →  200 OK when the processor is running.
 health_check_port: 8085
-# Set auth token
-# Set postgres_connection_string
-# Adjust starting_version / requiest_ending_version
+
 server_config:
+  # ── Processor selection ─────────────────────────────────────────────────────
+  processor_config:
+    type: "hyperion_swap_processor"
+
+  # ── Aptos gRPC Transaction Stream ──────────────────────────────────────────
   transaction_stream_config:
-    indexer_grpc_data_service_address: "https://grpc.mainnet.aptoslabs.com:443" # using mainnet as an example
-    auth_token: "aptoslabs_L7TnCkvEToY_DHz29qyTc9VoKSBfMaJCeLCHMhWAFEeeD" ## change to your own api key
-    request_name_header: "events-processor"
-    starting_version: 0
-    request_ending_version: 4
-  postgres_config:
-    connection_string: postgresql://postgres:root@localhost:5432/indexer
+
+    # Mainnet gRPC endpoint (Labs-hosted):
+    indexer_grpc_data_service_address: "https://grpc.mainnet.aptoslabs.com:443"
+
+    # Testnet endpoint (for development / testing):
+    # indexer_grpc_data_service_address: "https://grpc.testnet.aptoslabs.com:443"
+
+    # The ledger version to START indexing from.
+    # The processor will automatically resume from the last processed version
+    # on restart, so this value is only used on the very first run.
+    #
+    # Hyperion mainnet launch ~= version 1_400_000_000 (Feb 2025).
+    # Set this to 0 to index from genesis (very slow).
+    starting_version: 1400000000
+
+    # Optional: stop processing after this ledger version.
+    # Remove or comment out this line to run indefinitely (live indexing).
+    # request_ending_version: 1500000000
+
+    # API key from https://developers.aptoslabs.com/
+    # Format: aptoslabs_<random string>
+    auth_token: "aptoslabs_ESPwKGyNP5b_5ZhyKh94aj7GbGQiGdrHTc8mwKyUFA7Qu"
+
+    # Identifies this processor in Aptos Labs telemetry / logs.
+    request_name_header: "hyperion-swap-processor"
+
+  # ── PostgreSQL database ────────────────────────────────────────────────────
+  db_config:
+    # Format: postgresql://<user>:<password>@<host>:<port>/<database>
+    postgres_connection_string: "postgresql://postgres:postgres@localhost:5432/hyperion_indexer"
