@@ -5,9 +5,8 @@ use serde_json::Value;
 use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
 
-use crate::db::postgres::schema::hyperion_swap_events;
 
-#[derive(Serialize, Deserialize, Debug, Insertable, Queryable)]
+#[derive(Serialize, Deserialize, Debug, Queryable)]
 #[diesel(table_name = hyperion_swap_events)]
 pub struct HyperionSwapEvent {
     pub transaction_version: i64,
@@ -27,6 +26,8 @@ pub struct HyperionSwapEvent {
 
     pub amount_x_out: BigDecimal,
     pub amount_y_out: BigDecimal,
+
+    pub fee_amount: BigDecimal,
 
     pub sqrt_price_after: Option<BigDecimal>,
     pub current_tick_after: Option<i64>,
@@ -57,7 +58,7 @@ pub struct RawSwapEventData {
     #[serde(default)]
     pub sqrt_price_after: Option<String>,
     #[serde(default)]
-    pub current_tick_after: Option<serde_json:Value>,
+    pub current_tick_after: Option<serde_json::Value>,
     #[serde(default)]
     pub liquidity: Option<String>,
 }
@@ -101,13 +102,13 @@ impl HyperionSwapEvent {
         _event_type: &str,
         event_data: &Value,
     ) -> anyhow::Result<Self> {
-        let raw: RawSwapEventData = serde_json::from_value(event_data.clone().map_err(|e| {
+        let raw: RawSwapEventData = serde_json::from_value(event_data.clone()).map_err(|e| {
             anyhow::anyhow!(
                 "Failed to parse SwapEvent data at version {}: {}",
-                txn_version,
+                txn_value,
                 e
             )
-        }))?;
+        })?;
 
         let sender = raw
         .sender
@@ -156,7 +157,7 @@ impl HyperionSwapEvent {
         .and_then(|v| v.parse::<BigDecimal>().ok());
 
     Ok(HyperionSwapEvent {
-        transaction_version: txn_version,
+        transaction_version: txn_value,
         event_index,
         transaction_block_height: block_height,
         transaction_timestamp: txn_timestamp,
